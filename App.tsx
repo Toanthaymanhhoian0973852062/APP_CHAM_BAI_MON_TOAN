@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, SquareFunction, Sparkles, GraduationCap, GripVertical, RotateCw, FolderInput } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, SquareFunction, Sparkles, GraduationCap, GripVertical, RotateCw, FolderInput, Phone, Coffee, Heart } from 'lucide-react';
 import { analyzeMathProblem } from './services/geminiService';
 import { GradingResult, Submission } from './types';
 import { GradingView } from './components/GradingView';
@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'workspace' | 'history'>('workspace');
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
   
   // Resizable State
   const [leftPanelWidth, setLeftPanelWidth] = useState(40); // Default image width 40%, Result 60%
@@ -263,6 +264,10 @@ const App: React.FC = () => {
 
   const selectedSubmission = submissions.find(s => s.id === selectedId);
 
+  // Use VietQR API to generate dynamic QR based on provided info
+  // Bank: MB Bank (Military Bank), Account: 0973852062, Name: LE DUC MANH
+  const qrCodeUrl = `https://img.vietqr.io/image/MB-0973852062-print.png?addInfo=Donate%20App%20Toan%20Thay%20Manh&accountName=LE%20DUC%20MANH`;
+
   // --- MAIN APP ---
   return (
     <div 
@@ -285,20 +290,58 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Donate Modal */}
+      {showDonate && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setShowDonate(false)}
+        >
+          <div 
+            className="bg-white p-1 rounded-3xl shadow-2xl max-w-sm w-full relative animate-in zoom-in-95 duration-300 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowDonate(false)} 
+              className="absolute top-4 right-4 z-10 p-2 bg-black/10 hover:bg-black/20 rounded-full text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="bg-brand-50 p-6 flex flex-col items-center text-center rounded-[20px]">
+              <div className="bg-white p-3 rounded-2xl shadow-sm mb-4">
+                 <img 
+                    src={qrCodeUrl} 
+                    alt="QR Donate LE DUC MANH" 
+                    className="w-full h-auto rounded-lg mix-blend-multiply" 
+                  />
+              </div>
+              <h3 className="text-xl font-black text-brand-800 font-display mb-1">Cảm ơn tấm lòng của bạn! ❤️</h3>
+              <p className="text-sm text-brand-600 font-medium">Mỗi ly cà phê là động lực to lớn để mình phát triển ứng dụng tốt hơn.</p>
+              <div className="mt-4 px-4 py-2 bg-white rounded-lg border border-brand-100 text-xs font-mono text-gray-500">
+                MB Bank • 0973 852 062 • LE DUC MANH
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-200 py-3 px-4 md:px-8 flex items-center justify-between flex-shrink-0 z-20 sticky top-0">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setViewMode('workspace')}>
-          <div className="p-2.5 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl shadow-lg shadow-brand-500/20 text-white transform group-hover:scale-105 transition-transform duration-300">
-            <Sigma className="w-6 h-6" />
+        <div className="flex items-center gap-3">
+          <div 
+            className="p-2.5 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl shadow-lg shadow-brand-500/20 text-white transform hover:scale-105 transition-transform duration-300 cursor-pointer group" 
+            onClick={() => setViewMode('workspace')}
+            title="Về trang chủ"
+          >
+            <Sigma className="w-6 h-6 group-hover:rotate-12 transition-transform" />
           </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-800 tracking-tight leading-none font-display">
-              Toán <span className="text-brand-600">Thầy Mạnh</span>
-            </h1>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium mt-0.5">
-              <Calculator className="w-3.5 h-3.5 text-brand-400" />
-              <span>Chấm bài tự động chuẩn CT 2018</span>
+          <div className="flex flex-col">
+            <div 
+              className="text-lg md:text-2xl font-black text-gray-800 tracking-tight leading-none font-display uppercase"
+              title="Ứng dụng chấm bài môn toán"
+            >
+              APP HỖ TRỢ <span className="text-brand-600">CHẤM BÀI MÔN TOÁN</span>
             </div>
+            {/* Zalo info moved to footer */}
           </div>
         </div>
         
@@ -467,7 +510,7 @@ const App: React.FC = () => {
 
                       <button 
                         onClick={(e) => deleteSubmission(e, sub.id)}
-                        className="absolute top-1 right-1 md:top-2 md:right-2 p-1 bg-white hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-full md:opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-100"
+                        className="absolute top-1 right-1 md:top-2 md:right-2 p-1 bg-white hover:bg-red-50 text-gray-300 hover:text-red-50 rounded-full md:opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-100"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -626,6 +669,27 @@ const App: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full bg-white/90 backdrop-blur-sm border-t border-gray-200 py-2 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-2 text-xs md:text-sm text-gray-600 z-20 flex-shrink-0">
+          <div className="flex items-center gap-1.5">
+              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+              <span>App này được phát triển bởi <a href="https://www.facebook.com/toanthaymanh.hoian.0973852062" target="_blank" rel="noopener noreferrer" className="font-bold text-brand-700 hover:underline">Lê Đức Mạnh</a></span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-50 rounded-full border border-brand-100 text-brand-700 font-bold">
+             <Phone className="w-3 h-3" />
+             <span>Zalo: 0973 852 062</span>
+          </div>
+
+          <button 
+              onClick={() => setShowDonate(true)}
+              className="flex items-center gap-1.5 hover:text-orange-600 transition-colors font-bold group cursor-pointer"
+          >
+              <Coffee className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
+              <span>Ủng hộ tác giả</span>
+          </button>
+      </footer>
     </div>
   );
 };

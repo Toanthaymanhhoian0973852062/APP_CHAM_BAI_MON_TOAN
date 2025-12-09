@@ -112,7 +112,7 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
         <div className="flex justify-between items-center border-b-2 border-gray-800 pb-4 mb-6">
             <div>
                 <h1 className="text-2xl font-black text-gray-900 font-display uppercase tracking-widest">Phiếu Kết Quả</h1>
-                <p className="text-gray-500 text-sm font-medium">Toán Thầy Mạnh - Chấm bài chuẩn CT 2018</p>
+                <p className="text-gray-500 text-sm font-medium">APP HỖ TRỢ CHẤM BÀI MÔN TOÁN - Zalo: 0973 852 062</p>
             </div>
             <div className="text-right text-xs text-gray-400 font-mono">
                 {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -283,7 +283,7 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
 
         {/* Footer for Image */}
         <div className="mt-8 pt-4 border-t border-gray-100 text-center text-xs text-gray-400 font-mono">
-            Kết quả được chấm tự động bởi AI - Toán Thầy Mạnh
+            Kết quả được chấm tự động bởi AI - APP HỖ TRỢ CHẤM BÀI MÔN TOÁN (Zalo: 0973 852 062)
         </div>
       </div>
     </div>

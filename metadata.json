@@ -1,5 +1,5 @@
 {
-  "name": "Toán Thầy Mạnh",
+  "name": "APP HỖ TRỢ CHẤM BÀI MÔN TOÁN",
   "description": "Ứng dụng chấm bài toán thông minh dành cho học sinh và giáo viên, chuẩn kiến thức CT GDPT 2018.",
   "requestFramePermissions": [
     "camera"

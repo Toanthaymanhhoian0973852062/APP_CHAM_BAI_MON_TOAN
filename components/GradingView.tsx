@@ -1,10 +1,30 @@
 import React from 'react';
 import { GradingResult } from '../types';
-import { Check, X, AlertTriangle, Star, Activity, PenTool, Calculator, BrainCircuit, Lightbulb } from 'lucide-react';
+import { Check, X, Star, Activity, PenTool, Calculator, BrainCircuit, Lightbulb } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+// CSS import removed, handled in index.html for compatibility
 
 interface GradingViewProps {
   result: GradingResult;
 }
+
+const MathMarkdown = ({ content, className = "" }: { content: string, className?: string }) => {
+  return (
+    <div className={`markdown-content ${className}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          p: ({ children }) => <span className="inline-block">{children}</span>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 const ScoreBadge: React.FC<{ score: number }> = ({ score }) => {
   let colorClass = "text-green-600 border-green-600 bg-green-50";
@@ -43,7 +63,7 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
           <h2 className="text-2xl sm:text-3xl font-black text-gray-800 mb-3 tracking-tight font-display">Kết quả chi tiết</h2>
           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed text-sm sm:text-base italic relative">
             <span className="absolute -top-3 left-4 bg-white px-2 text-xs font-bold text-gray-400 uppercase tracking-wider border border-gray-100 rounded-md">Nhận xét chung</span>
-            "{result.summary}"
+            <MathMarkdown content={`"${result.summary}"`} />
           </div>
         </div>
         <div className="flex-shrink-0 mb-2 sm:mb-0">
@@ -60,9 +80,9 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
             <Activity className="w-4 h-4" />
             Đề bài nhận diện
         </h4>
-        <p className="text-blue-900 font-medium text-sm sm:text-lg leading-relaxed break-words relative z-10 font-display">
-            {result.problemStatement}
-        </p>
+        <div className="text-blue-900 font-medium text-sm sm:text-lg leading-relaxed break-words relative z-10 font-display">
+            <MathMarkdown content={result.problemStatement} />
+        </div>
       </div>
 
       {/* Step by Step Analysis */}
@@ -98,12 +118,16 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-gray-500 text-xs sm:text-sm uppercase tracking-wide bg-gray-100 px-2 py-0.5 rounded">Bước {step.stepNumber}</span>
                   </div>
-                  <p className="text-gray-900 font-bold text-base sm:text-lg mb-3 break-words font-display">{step.content}</p>
+                  <div className="text-gray-900 font-bold text-base sm:text-lg mb-3 break-words font-display">
+                    <MathMarkdown content={step.content} />
+                  </div>
                   
-                  <p className={`text-sm ${step.isCorrect ? 'text-green-700' : 'text-red-700'} break-words flex items-start gap-2`}>
-                    <span className="mt-0.5 block w-1.5 h-1.5 rounded-full flex-shrink-0 bg-current opacity-60"></span>
-                    {step.feedback}
-                  </p>
+                  <div className={`text-sm ${step.isCorrect ? 'text-green-700' : 'text-red-700'} break-words flex items-start gap-2`}>
+                    <span className="mt-1.5 block w-1.5 h-1.5 rounded-full flex-shrink-0 bg-current opacity-60"></span>
+                    <div className="flex-1">
+                      <MathMarkdown content={step.feedback} />
+                    </div>
+                  </div>
 
                   {!step.isCorrect && step.correction && (
                     <div className="mt-4 p-4 bg-white rounded-xl border border-red-100 text-sm text-gray-700 shadow-sm">
@@ -111,7 +135,9 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
                         <PenTool className="w-3 h-3" />
                         Sửa lại cho đúng
                       </div>
-                      <div className="break-words font-medium">{step.correction}</div>
+                      <div className="break-words font-medium">
+                        <MathMarkdown content={step.correction} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -128,21 +154,27 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
             <div className="p-2 bg-purple-100 rounded-lg"><BrainCircuit className="w-5 h-5" /></div>
             Tư duy Logic
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">{result.competencies.logic}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            <MathMarkdown content={result.competencies.logic} />
+          </p>
         </div>
         <div className="p-5 bg-gradient-to-br from-orange-50 to-white rounded-2xl border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-3 text-orange-700 font-bold text-base">
             <div className="p-2 bg-orange-100 rounded-lg"><Calculator className="w-5 h-5" /></div>
             Tính toán
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">{result.competencies.calculation}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+             <MathMarkdown content={result.competencies.calculation} />
+          </p>
         </div>
         <div className="p-5 bg-gradient-to-br from-teal-50 to-white rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-3 text-teal-700 font-bold text-base">
             <div className="p-2 bg-teal-100 rounded-lg"><PenTool className="w-5 h-5" /></div>
             Trình bày
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">{result.competencies.presentation}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            <MathMarkdown content={result.competencies.presentation} />
+          </p>
         </div>
       </div>
 
@@ -156,7 +188,12 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
           </h3>
           <div className="overflow-x-auto bg-gray-800/50 p-4 rounded-xl border border-gray-700">
             <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap font-mono text-xs sm:text-sm break-words leading-loose">
-              {result.correctSolution}
+               <ReactMarkdown 
+                remarkPlugins={[remarkMath]} 
+                rehypePlugins={[rehypeKatex]}
+               >
+                 {result.correctSolution}
+               </ReactMarkdown>
             </div>
           </div>
         </div>
@@ -173,7 +210,9 @@ export const GradingView: React.FC<GradingViewProps> = ({ result }) => {
             {result.tips.map((tip, idx) => (
               <li key={idx} className="flex items-start gap-3 text-yellow-900 text-sm sm:text-base p-2 bg-white/50 rounded-lg border border-yellow-100/50">
                 <span className="mt-1.5 w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 shadow-sm" />
-                <span className="break-words font-medium">{tip}</span>
+                <span className="break-words font-medium">
+                   <MathMarkdown content={tip} />
+                </span>
               </li>
             ))}
           </ul>

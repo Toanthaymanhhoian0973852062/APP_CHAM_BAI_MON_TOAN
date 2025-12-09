@@ -28,4 +28,5 @@ export interface Submission {
   result: GradingResult | null;
   errorMessage: string | null;
   uploadedAt: number;
+  rotation: number; // Rotation angle in degrees
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, FunctionSquare, Sparkles, GraduationCap } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, SquareFunction, Sparkles, GraduationCap, GripVertical, RotateCw } from 'lucide-react';
 import { analyzeMathProblem } from './services/geminiService';
 import { GradingResult, Submission } from './types';
 import { GradingView } from './components/GradingView';
@@ -12,6 +12,11 @@ const App: React.FC = () => {
   const [isGradingAll, setIsGradingAll] = useState(false);
   const [viewMode, setViewMode] = useState<'workspace' | 'history'>('workspace');
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Resizable State
+  const [leftPanelWidth, setLeftPanelWidth] = useState(40); // Default image width 40%, Result 60%
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,12 +44,44 @@ const App: React.FC = () => {
     }
   }, [submissions, isLoaded]);
 
-  // Auto-select logic
+  // Auto-select logic for initial load only
   useEffect(() => {
     if (viewMode === 'workspace' && submissions.length > 0 && !selectedId) {
       setSelectedId(submissions[submissions.length - 1].id);
     }
   }, [submissions.length, selectedId, viewMode]);
+
+  // Resizing Logic
+  const startResizing = useCallback(() => {
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing && containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      // Limit min/max width (20% to 80%)
+      if (newLeftWidth > 20 && newLeftWidth < 80) {
+        setLeftPanelWidth(newLeftWidth);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
+
 
   const processFiles = useCallback((files: File[]) => {
     if (files.length === 0) return;
@@ -68,13 +105,18 @@ const App: React.FC = () => {
             status: 'idle',
             result: null,
             errorMessage: null,
-            uploadedAt: Date.now()
+            uploadedAt: Date.now(),
+            rotation: 0
           });
         }
         processedCount++;
         if (processedCount === files.length) {
           setSubmissions(prev => [...prev, ...newSubmissions]);
           setViewMode('workspace'); 
+          // Automatically select the last item from the newly added batch
+          if (newSubmissions.length > 0) {
+            setSelectedId(newSubmissions[newSubmissions.length - 1].id);
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -154,6 +196,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRotate = (id: string) => {
+    setSubmissions(prev => prev.map(s => 
+      s.id === id ? { ...s, rotation: (s.rotation || 0) + 90 } : s
+    ));
+  };
+
   const resetAll = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa tất cả dữ liệu? Hành động này không thể hoàn tác.")) {
       setSubmissions([]);
@@ -171,7 +219,7 @@ const App: React.FC = () => {
 
   // --- MAIN APP ---
   return (
-    <div className="min-h-screen flex flex-col items-center bg-graph-paper h-screen overflow-hidden text-gray-800">
+    <div className={`min-h-screen flex flex-col items-center bg-graph-paper h-screen overflow-hidden text-gray-800 ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
       {/* Header */}
       <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-200 py-3 px-4 md:px-8 flex items-center justify-between flex-shrink-0 z-20 sticky top-0">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setViewMode('workspace')}>
@@ -279,7 +327,7 @@ const App: React.FC = () => {
                   {/* Decorative Icons */}
                   <Pi className="absolute top-8 left-8 w-12 h-12 text-brand-100 rotate-[-15deg] group-hover:text-brand-200 transition-colors" />
                   <Binary className="absolute bottom-8 right-8 w-12 h-12 text-brand-100 rotate-[15deg] group-hover:text-brand-200 transition-colors" />
-                  <FunctionSquare className="absolute top-8 right-8 w-8 h-8 text-brand-100 group-hover:text-brand-200 transition-colors" />
+                  <SquareFunction className="absolute top-8 right-8 w-8 h-8 text-brand-100 group-hover:text-brand-200 transition-colors" />
                   <div className="absolute bottom-10 left-10 w-6 h-6 rounded-full border-2 border-brand-100"></div>
 
                   <div className="p-5 bg-gradient-to-br from-brand-50 to-white rounded-full mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300 ring-4 ring-brand-50">
@@ -302,11 +350,11 @@ const App: React.FC = () => {
 
             {/* Sidebar / List (Visible if submissions exist) */}
             {submissions.length > 0 && (
-              <div className="w-full md:w-72 lg:w-80 bg-white/90 backdrop-blur-sm border-b md:border-b-0 md:border-r border-gray-200 flex flex-col flex-shrink-0 z-10 h-[140px] md:h-full shadow-lg md:shadow-none">
+              <div className="w-full md:w-60 lg:w-64 bg-white/90 backdrop-blur-sm border-b md:border-b-0 md:border-r border-gray-200 flex flex-col flex-shrink-0 z-10 h-[140px] md:h-full shadow-lg md:shadow-none">
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                     <GraduationCap className="w-4 h-4" />
-                    Bài cần chấm ({submissions.length})
+                    Bài làm ({submissions.length})
                   </span>
                 </div>
                 
@@ -322,7 +370,7 @@ const App: React.FC = () => {
                       }`}
                     >
                       {/* Thumbnail */}
-                      <div className="w-full md:w-16 h-24 md:h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden relative border border-gray-200 group-hover:border-brand-100 transition-colors">
+                      <div className="w-full md:w-12 h-24 md:h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden relative border border-gray-200 group-hover:border-brand-100 transition-colors">
                         <img src={sub.imageUrl} alt="thumbnail" className="w-full h-full object-cover" />
                         
                         <div className="absolute inset-0 bg-black/5 flex items-center justify-center transition-opacity">
@@ -345,8 +393,8 @@ const App: React.FC = () => {
                               sub.status === 'error' ? 'text-red-600 bg-red-50 border-red-100' :
                               'text-gray-500 bg-gray-100 border-gray-200'
                             }`}>
-                              {sub.status === 'grading' ? 'Đang xử lý' : 
-                                sub.status === 'error' ? 'Lỗi' : 'Chờ xử lý'}
+                              {sub.status === 'grading' ? 'Xử lý' : 
+                                sub.status === 'error' ? 'Lỗi' : 'Chờ chấm'}
                             </span>
                           )}
                         </div>
@@ -366,50 +414,81 @@ const App: React.FC = () => {
 
             {/* Workspace Area */}
             {selectedSubmission ? (
-              <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white/50 backdrop-blur-sm">
+              <div 
+                ref={containerRef}
+                className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white/50 backdrop-blur-sm relative"
+              >
                 
-                {/* Left Panel: Image Viewer */}
-                <div className="w-full md:w-5/12 lg:w-1/2 bg-gray-100/50 flex flex-col border-b md:border-b-0 md:border-r border-gray-200 h-[40vh] md:h-full relative">
+                {/* Left Panel: Image Viewer (Resizable) */}
+                <div 
+                  className="w-full md:h-full flex flex-col border-b md:border-b-0 border-gray-200 h-[40vh] relative flex-shrink-0"
+                  style={{ width: window.innerWidth >= 768 ? `${leftPanelWidth}%` : '100%' }}
+                >
                   <div className="absolute inset-0 bg-graph-paper opacity-50 pointer-events-none"></div>
                   
                   <div className="p-3 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm z-10 relative">
-                    <h3 className="font-bold text-gray-700 flex items-center gap-2 truncate text-sm md:text-base">
+                    <h3 className="font-bold text-gray-700 flex items-center gap-2 truncate text-sm md:text-base flex-1 min-w-0 mr-2">
                       <div className="p-1 bg-brand-100 text-brand-600 rounded">
                         <FileText className="w-4 h-4" />
                       </div>
-                      {selectedSubmission.fileName}
+                      <span className="truncate">{selectedSubmission.fileName}</span>
                     </h3>
                     
-                    {selectedSubmission.status !== 'grading' && !selectedSubmission.result && (
-                      <button
-                        onClick={() => gradeSubmission(selectedSubmission.id)}
-                        className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all shadow-sm flex items-center gap-1.5 hover:shadow-md"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Chấm ngay
-                      </button>
-                    )}
-                    {selectedSubmission.status === 'success' && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handleRotate(selectedSubmission.id)}
+                            className="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-gray-200 hover:border-brand-200"
+                            title="Xoay hình ảnh"
+                        >
+                            <RotateCw className="w-4 h-4" />
+                        </button>
+                        
+                        {selectedSubmission.status !== 'grading' && !selectedSubmission.result && (
                         <button
                             onClick={() => gradeSubmission(selectedSubmission.id)}
-                            className="text-xs bg-white border border-gray-200 hover:border-brand-300 text-gray-600 hover:text-brand-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors"
+                            className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs md:text-sm font-bold transition-all shadow-sm flex items-center gap-1.5 hover:shadow-md whitespace-nowrap"
                         >
-                            <RotateCcw className="w-3 h-3" /> Chấm lại
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Chấm ngay
                         </button>
-                    )}
+                        )}
+                        {selectedSubmission.status === 'success' && (
+                            <button
+                                onClick={() => gradeSubmission(selectedSubmission.id)}
+                                className="text-xs bg-white border border-gray-200 hover:border-brand-300 text-gray-600 hover:text-brand-700 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-colors whitespace-nowrap"
+                            >
+                                <RotateCcw className="w-3 h-3" /> Chấm lại
+                            </button>
+                        )}
+                    </div>
                   </div>
                   
-                  <div className="flex-1 relative overflow-hidden p-4 flex items-center justify-center z-0">
+                  <div className="flex-1 relative overflow-hidden p-4 flex items-center justify-center z-0 bg-gray-100/50">
                     <img 
                       src={selectedSubmission.imageUrl} 
                       alt="Current submission" 
-                      className="max-w-full max-h-full object-contain shadow-2xl rounded-lg border-4 border-white transform transition-transform"
+                      style={{ 
+                          transform: `rotate(${selectedSubmission.rotation || 0}deg)`,
+                          transition: 'transform 0.3s ease-in-out'
+                      }}
+                      className="max-w-full max-h-full object-contain shadow-2xl rounded-lg border-4 border-white"
                     />
                   </div>
                 </div>
 
-                {/* Right Panel: Grading Results */}
-                <div className="w-full md:w-7/12 lg:w-1/2 flex flex-col h-[60vh] md:h-full bg-white relative">
+                {/* Drag Handle (Desktop Only) */}
+                <div
+                  className="hidden md:flex w-2 bg-gray-100 border-l border-r border-gray-200 cursor-col-resize items-center justify-center hover:bg-brand-100 hover:border-brand-200 transition-colors z-20"
+                  onMouseDown={startResizing}
+                >
+                  <GripVertical className="w-3 h-3 text-gray-400" />
+                </div>
+
+                {/* Right Panel: Grading Results (Resizable) */}
+                <div 
+                  className="w-full flex flex-col h-[60vh] md:h-full bg-white relative flex-shrink-0"
+                  style={{ width: window.innerWidth >= 768 ? `calc(${100 - leftPanelWidth}% - 8px)` : '100%' }}
+                >
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8">
                     {selectedSubmission.status === 'idle' && (
                       <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">

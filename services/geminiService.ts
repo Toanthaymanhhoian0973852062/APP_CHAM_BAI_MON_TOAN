@@ -1,8 +1,17 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { GradingResult } from "../types";
 
-// Must be provided via environment variable as per instructions
-const API_KEY = process.env.API_KEY || '';
+// Safely retrieve API Key across different environments (Vite Build vs Browser Preview)
+const getApiKey = () => {
+  try {
+    // @ts-ignore
+    return process.env.API_KEY || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+const API_KEY = getApiKey();
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
@@ -11,7 +20,7 @@ const gradingSchema: Schema = {
   properties: {
     problemStatement: {
       type: Type.STRING,
-      description: "Đề bài toán được trích xuất từ hình ảnh."
+      description: "Đề bài toán được trích xuất từ hình ảnh. Sử dụng LaTeX cho công thức toán."
     },
     score: {
       type: Type.NUMBER,
@@ -27,17 +36,17 @@ const gradingSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           stepNumber: { type: Type.INTEGER },
-          content: { type: Type.STRING, description: "Mô tả bước làm của học sinh." },
+          content: { type: Type.STRING, description: "Mô tả bước làm của học sinh. Sử dụng LaTeX cho công thức toán." },
           isCorrect: { type: Type.BOOLEAN },
-          correction: { type: Type.STRING, description: "Sửa lỗi nếu bước này sai (để trống nếu đúng)." },
-          feedback: { type: Type.STRING, description: "Nhận xét chi tiết cho bước này." }
+          correction: { type: Type.STRING, description: "Sửa lỗi nếu bước này sai (để trống nếu đúng). Sử dụng LaTeX cho công thức toán." },
+          feedback: { type: Type.STRING, description: "Nhận xét chi tiết cho bước này. Sử dụng LaTeX cho công thức toán." }
         },
         required: ["stepNumber", "content", "isCorrect", "feedback"]
       }
     },
     correctSolution: {
       type: Type.STRING,
-      description: "Lời giải đúng hoàn chỉnh (Markdown) nếu học sinh làm sai hoặc chưa tối ưu."
+      description: "Lời giải đúng hoàn chỉnh nếu học sinh làm sai hoặc chưa tối ưu. Bắt buộc sử dụng Markdown và LaTeX cho công thức."
     },
     competencies: {
       type: Type.OBJECT,
@@ -61,33 +70,36 @@ export const analyzeMathProblem = async (base64Image: string): Promise<GradingRe
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: [
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: base64Image
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: base64Image
+            }
+          },
+          {
+            text: `Bạn là một giáo viên Toán học Việt Nam xuất sắc, am hiểu sâu sắc Chương trình Giáo dục Phổ thông 2018 (CT 2018).
+            
+            Nhiệm vụ của bạn là chấm bài làm toán trong hình ảnh được cung cấp.
+            
+            Hãy thực hiện các bước sau:
+            1. Nhận diện đề bài toán.
+            2. Phân tích từng bước giải của học sinh.
+            3. Kiểm tra tính chính xác của tính toán, tính logic của lập luận và cách trình bày.
+            4. Chấm điểm theo thang điểm 10.
+            5. Đưa ra nhận xét phát triển phẩm chất và năng lực (tư duy, tính toán, trình bày).
+            6. Nếu bài làm sai, hãy chỉ ra chỗ sai và cung cấp lời giải đúng chuẩn mực.
+            
+            Yêu cầu quan trọng về định dạng:
+            - Các công thức toán học BẮT BUỘC phải được viết bằng định dạng LaTeX, kẹp giữa dấu $ (ví dụ: $x^2 + 2x + 1 = 0$, $\\frac{1}{2}$).
+            - Không sử dụng dấu \\( \\) hoặc \\[ \\] cho công thức toán. Chỉ sử dụng dấu $.
+            - Sử dụng Tiếng Việt chuẩn mực, giọng điệu sư phạm, khích lệ.
+            - Chú trọng vào tư duy logic hơn là chỉ kết quả cuối cùng.
+            `
           }
-        },
-        {
-          text: `Bạn là một giáo viên Toán học Việt Nam xuất sắc, am hiểu sâu sắc Chương trình Giáo dục Phổ thông 2018 (CT 2018).
-          
-          Nhiệm vụ của bạn là chấm bài làm toán trong hình ảnh được cung cấp.
-          
-          Hãy thực hiện các bước sau:
-          1. Nhận diện đề bài toán.
-          2. Phân tích từng bước giải của học sinh.
-          3. Kiểm tra tính chính xác của tính toán, tính logic của lập luận và cách trình bày.
-          4. Chấm điểm theo thang điểm 10.
-          5. Đưa ra nhận xét phát triển phẩm chất và năng lực (tư duy, tính toán, trình bày).
-          6. Nếu bài làm sai, hãy chỉ ra chỗ sai và cung cấp lời giải đúng chuẩn mực.
-          
-          Yêu cầu:
-          - Giọng điệu sư phạm, khích lệ nhưng nghiêm khắc về tính chính xác.
-          - Chú trọng vào tư duy logic hơn là chỉ kết quả cuối cùng.
-          - Sử dụng Tiếng Việt chuẩn.
-          `
-        }
-      ],
+        ]
+      },
       config: {
         responseMimeType: "application/json",
         responseSchema: gradingSchema,

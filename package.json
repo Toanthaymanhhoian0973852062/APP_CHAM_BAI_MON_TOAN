@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,7 +16,8 @@
     "react-markdown": "^9.0.1",
     "remark-math": "^6.0.0",
     "rehype-katex": "^7.0.0",
-    "katex": "^0.16.9"
+    "katex": "^0.16.9",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",

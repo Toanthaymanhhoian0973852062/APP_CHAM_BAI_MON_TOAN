@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, SquareFunction, Sparkles, GraduationCap, GripVertical, RotateCw } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, RotateCcw, Plus, Trash2, FileText, ChevronRight, History as HistoryIcon, LayoutGrid, Sigma, Pi, Calculator, Binary, SquareFunction, Sparkles, GraduationCap, GripVertical, RotateCw, FolderInput } from 'lucide-react';
 import { analyzeMathProblem } from './services/geminiService';
 import { GradingResult, Submission } from './types';
 import { GradingView } from './components/GradingView';
@@ -12,11 +12,13 @@ const App: React.FC = () => {
   const [isGradingAll, setIsGradingAll] = useState(false);
   const [viewMode, setViewMode] = useState<'workspace' | 'history'>('workspace');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Resizable State
   const [leftPanelWidth, setLeftPanelWidth] = useState(40); // Default image width 40%, Result 60%
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragCounter = useRef(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,10 +88,18 @@ const App: React.FC = () => {
   const processFiles = useCallback((files: File[]) => {
     if (files.length === 0) return;
 
+    // Filter only image files
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+        alert("Vui lòng chỉ chọn tệp hình ảnh (JPG, PNG, ...)");
+        return;
+    }
+
     const newSubmissions: Submission[] = [];
     let processedCount = 0;
     
-    files.forEach(file => {
+    imageFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -110,7 +120,7 @@ const App: React.FC = () => {
           });
         }
         processedCount++;
-        if (processedCount === files.length) {
+        if (processedCount === imageFiles.length) {
           setSubmissions(prev => [...prev, ...newSubmissions]);
           setViewMode('workspace'); 
           // Automatically select the last item from the newly added batch
@@ -130,6 +140,42 @@ const App: React.FC = () => {
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Drag and Drop Handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFiles(Array.from(files));
+    }
+  }, [processFiles]);
 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -219,7 +265,26 @@ const App: React.FC = () => {
 
   // --- MAIN APP ---
   return (
-    <div className={`min-h-screen flex flex-col items-center bg-graph-paper h-screen overflow-hidden text-gray-800 ${isResizing ? 'cursor-col-resize select-none' : ''}`}>
+    <div 
+        className={`min-h-screen flex flex-col items-center bg-graph-paper h-screen overflow-hidden text-gray-800 ${isResizing ? 'cursor-col-resize select-none' : ''}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-brand-500/10 backdrop-blur-sm border-4 border-dashed border-brand-500 flex items-center justify-center pointer-events-none">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center animate-bounce border border-brand-100">
+            <div className="p-4 bg-brand-100 rounded-full mb-4">
+                <FolderInput className="w-16 h-16 text-brand-600" />
+            </div>
+            <span className="text-2xl font-black text-brand-700 tracking-tight font-display">Thả hình ảnh vào đây</span>
+            <span className="text-gray-500 mt-2">Thêm ngay vào danh sách chấm bài</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-200 py-3 px-4 md:px-8 flex items-center justify-between flex-shrink-0 z-20 sticky top-0">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setViewMode('workspace')}>

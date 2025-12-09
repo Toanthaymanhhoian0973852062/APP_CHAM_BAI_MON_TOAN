@@ -8,10 +8,14 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Polyfill process.env for the browser
+      // Replaces process.env.API_KEY with the string value during build
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Define process to avoid ReferenceError in some environments that might check process.env.*
+      // Polyfill process.env to prevent crashes if other libs access it
       'process.env': {},
     },
+    build: {
+      outDir: 'dist',
+      sourcemap: false
+    }
   };
 });
